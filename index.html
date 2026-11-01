@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Лаборатория Молекул и Кристаллов</title>
+    
+    <style>
+        :root {
+            --bg-color: #0f172a;        /* Глубокий темно-синий */
+            --panel-bg: #1e293b;        /* Панель управления */
+            --text-main: #f8fafc;       /* Светлый текст */
+            --accent-cyan: #38bdf8;     /* Холод / Молекулы */
+            --accent-orange: #f97316;   /* Тепло / Температура */
+            --accent-purple: #a855f7;   /* Кристаллы / Аморфные */
+            --accent-green: #22c55e;    /* Успех */
+            --border-color: #334155;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body {
+            margin: 0; padding: 20px;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+            color: var(--text-main);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh;
+        }
+
+        .game-card {
+            background: var(--panel-bg);
+            border: 4px solid var(--border-color);
+            border-radius: 28px;
+            width: 100%; max-width: 900px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 20px rgba(56, 189, 248, 0.15);
+            overflow: hidden;
+            display: flex; flex-direction: column;
+            position: relative;
+            min-height: 650px;
+        }
+
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 20px 80px 20px 20px; 
+            text-align: center; position: relative;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .level-badge {
+            display: inline-block; font-size: 18px; color: var(--accent-cyan); 
+            font-weight: bold; margin-bottom: 8px;
+            background: rgba(56, 189, 248, 0.15); padding: 6px 20px; border-radius: 20px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .title { font-size: 28px; font-weight: bold; margin: 0; color: #fff; }
+
+        .btn-voice {
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            width: 60px; height: 60px; border-radius: 30px;
+            background: var(--accent-orange); border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+        }
+        .btn-voice:hover { transform: translateY(-50%) scale(1.06); background: #ea580c; }
+        .btn-voice:active { transform: translateY(-50%) scale(0.95); }
+        .btn-voice svg { fill: #ffffff; width: 32px; height: 32px; }
+
+        .game-area {
+            display: flex; flex-direction: column; padding: 25px; gap: 20px;
+            align-items: center; justify-content: center; flex-grow: 1;
+        }
+
+        .instruction {
+            font-size: 23px; line-height: 1.5; text-align: center;
+            color: #cbd5e1; max-width: 780px;
+        }
+
+        /* Визуальный контейнер */
+        .visual-box {
+            width: 100%; max-width: 620px; height: 320px;
+            background: #020617; border-radius: 24px;
+            border: 3px solid var(--border-color);
+            position: relative; overflow: hidden;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.9);
+            display: flex; align-items: center; justify-content: center;
+        }
+        svg { width: 100%; height: 100%; user-select: none; }
+
+        /* Элементы управления */
+        .controls-row {
+            display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, var(--accent-cyan), #0284c7);
+            color: #020617; border: none; padding: 16px 36px; font-size: 22px; font-weight: bold;
+            border-radius: 50px; cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 6px 0 #0369a1, 0 10px 15px rgba(0,0,0,0.3);
+        }
+        .action-btn:hover { transform: translateY(2px); box-shadow: 0 4px 0 #0369a1; }
+        .action-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #0369a1; }
+
+        .choice-card {
+            background: #0f172a; border: 3px solid var(--border-color);
+            border-radius: 18px; padding: 20px; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            width: 240px; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .choice-card:hover { transform: scale(1.05); border-color: var(--accent-cyan); }
+
+        .feedback-box {
+            padding: 16px 28px; border-radius: 16px; font-size: 22px; font-weight: bold;
+            text-align: center; width: 100%; max-width: 720px;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .feedback-box.show { opacity: 1; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .fb-success { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 2px solid var(--accent-green); }
+        .fb-info { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; border: 2px solid var(--accent-cyan); }
+
+        /* Оверлеи старта и завершения */
+        .overlay-screen {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--panel-bg); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 30px; overflow-y: auto;
+        }
+        .hidden { display: none !important; }
+        .emoji-big { font-size: 90px; margin-bottom: 20px; filter: drop-shadow(0 0 20px rgba(56,189,248,0.5)); }
+        
+        .btn-start {
+            background: var(--accent-cyan); color: #0f172a; border: none;
+            padding: 18px 50px; font-size: 26px; font-weight: bold; border-radius: 50px;
+            cursor: pointer; margin-top: 25px; transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 0 #0284c7, 0 10px 20px rgba(0,0,0,0.4);
+        }
+        .btn-start:hover { transform: translateY(2px); box-shadow: 0 6px 0 #0284c7; }
+        .btn-start:active { transform: translateY(8px); box-shadow: 0 0 0 #0284c7; }
+
+        @keyframes popIn { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+    </style>
+</head>
+<body>
+
+    <div class="game-card">
+        
+        <!-- Шапка -->
+        <div class="header">
+            <div id="level-indicator" class="level-badge">Уровень 1 из 4</div>
+            <h1 id="level-title" class="title">Загрузка...</h1>
+            <button class="btn-voice" onclick="speakCurrentInstruction()" aria-label="Прочитать вслух">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Игровая зона -->
+        <div class="game-area">
+            <div id="instruction" class="instruction">Инструкция...</div>
+            
+            <div class="visual-box" id="visual-container">
+                <!-- SVG анимация сгенерируется динамически -->
+            </div>
+
+            <div id="controls-area" class="controls-row"></div>
+
+            <div id="feedback" class="feedback-box">Отлично!</div>
+        </div>
+
+        <!-- Приветственный экран -->
+        <div id="screen-intro" class="overlay-screen">
+            <div class="emoji-big" style="animation: float 3s infinite ease-in-out;">🔬⚛️</div>
+            <h1 style="font-size: 38px; margin-bottom: 15px; color: white;">Лаборатория Молекул и Кристаллов</h1>
+            <p style="font-size: 22px; max-width: 720px; line-height: 1.5; color: #cbd5e1;">
+                Добро пожаловать в виртуальную лабораторию физики!<br><br>
+                Здесь мы узнаем, как летают невидимые молекулы, почему температура ускоряет частицы и чем стройный кристалл отличается от хаотичного стекла.
+            </p>
+            <button class="btn-start" onclick="startGame()">Начать исследования 🚀</button>
+        </div>
+
+        <!-- Экран успеха -->
+        <div id="screen-outro" class="overlay-screen hidden">
+            <div class="emoji-big">🏆💎</div>
+            <h1 style="font-size: 40px; margin-bottom: 15px; color: white;">Все исследования завершены!</h1>
+            <p style="font-size: 24px; max-width: 720px; line-height: 1.5; color: #cbd5e1;">
+                Ты отлично усвоил молекулярно-кинетическую теорию, параметры газа и строение твердых тел!
+            </p>
+            <button class="btn-start" onclick="location.reload()">Пройти еще раз 🔄</button>
+        </div>
+    </div>
+
+    <script>
+        const LEVELS = [
+            {
+                id: 'mkt_motion',
+                title: 'Задание 1. Движение Молекул и Нагрев',
+                text: 'Молекулы находятся в постоянном хаотичном движении. Нажми кнопку "Нагреть 🔥", чтобы добавить энергии и посмотреть, как молекулы ускоряются!',
+            },
+            {
+                id: 'parameters_pressure',
+                title: 'Задание 2. Давление и Поршень',
+                text: 'Нажми на поршень, чтобы сжать газ (уменьшить объём V). Посмотри, как часто молекулы начнут стучать в стенки (растёт давление P)!',
+            },
+            {
+                id: 'crystals_structure',
+                title: 'Задание 3. Порядок или Хаос?',
+                text: 'В кристаллическом теле (слева) атомы стоят в строгом порядке, как солдаты. В аморфном (справа) — полный хаос. Нажми на КРИСТАЛЛ!',
+            },
+            {
+                id: 'substance_sorting',
+                title: 'Задание 4. Распредели вещества',
+                text: 'Лёд и соль имеют строгую кристалическую решётку. А воск и стекло — аморфные. Выбери предмет, который является КРИСТАЛЛОМ!',
+            }
+        ];
+
+        let currentLevelIdx = 0;
+        let animFrameId = null;
+        let molecules = [];
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ru-RU';
+                utterance.rate = 0.88;
+                utterance.pitch = 1.05;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function speakCurrentInstruction() {
+            speakText(LEVELS[currentLevelIdx].text);
+        }
+
+        function startGame() {
+            document.getElementById('screen-intro').classList.add('hidden');
+            loadLevel(currentLevelIdx);
+        }
+
+        function loadLevel(idx) {
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            const level = LEVELS[idx];
+            
+            document.getElementById('level-indicator').innerText = `Уровень ${idx + 1} из ${LEVELS.length}`;
+            document.getElementById('level-title').innerText = level.title;
+            document.getElementById('instruction').innerText = level.text;
+            
+            const fb = document.getElementById('feedback');
+            fb.className = 'feedback-box';
+            fb.innerText = '';
+
+            renderLevel(level.id);
+            setTimeout(speakCurrentInstruction, 400);
+        }
+
+        function renderLevel(type) {
+            const visualBox = document.getElementById('visual-container');
+            const controlsBox = document.getElementById('controls-area');
+            controlsBox.innerHTML = '';
+
+            if (type === 'mkt_motion') {
+                visualBox.innerHTML = `
+                <svg id="mkt-svg" viewBox="0 0 600 300">
+                    <rect x="50" y="20" width="500" height="260" rx="15" fill="#090d16" stroke="#334155" stroke-width="4"/>
+                    <g id="molecules-group"></g>
+                    <text id="temp-label" x="300" y="50" font-size="20" fill="#38bdf8" text-anchor="middle" font-weight="bold">Температура (T): Низкая ❄️</text>
+                </svg>`;
+
+                controlsBox.innerHTML = `
+                    <button class="action-btn" style="background: linear-gradient(135deg, #f97316, #dc2626);" onclick="heatMolecules()">
+                        🔥 Нагреть газ!
+                    </button>
+                `;
+
+                initMolecules(15, 1.5);
+                animateMolecules();
+            }
+
+            else if (type === 'parameters_pressure') {
+                visualBox.innerHTML = `
+                <svg id="piston-svg" viewBox="0 0 600 300">
+                    <rect x="100" y="20" width="400" height="260" rx="10" fill="#090d16" stroke="#334155" stroke-width="4"/>
+                    <!-- Поршень -->
+                    <rect id="piston" x="420" y="24" width="20" height="252" fill="#64748b" stroke="#cbd5e1" stroke-width="2"/>
+                    <g id="piston-molecules"></g>
+                    <text id="pressure-label" x="250" y="50" font-size="20" fill="#38bdf8" text-anchor="middle" font-weight="bold">Объём (V): Большой | Давление (P): Низкое</text>
+                </svg>`;
+
+                controlsBox.innerHTML = `
+                    <button class="action-btn" onclick="compressPiston()">
+                        ⬇️ Сжать поршень (уменьшить V)
+                    </button>
+                `;
+
+                initPistonMolecules(12, 400);
+                animatePistonMolecules(400);
+            }
+
+            else if (type === 'crystals_structure') {
+                visualBox.innerHTML = `
+                <svg viewBox="0 0 600 300">
+                    <!-- Кристалл (Слева) -->
+                    <g class="choice-card" onclick="checkCrystalChoice(true)">
+                        <rect x="30" y="20" width="250" height="240" rx="15" fill="#090d16" stroke="#38bdf8" stroke-width="3"/>
+                        <text x="155" y="50" font-size="18" fill="#38bdf8" text-anchor="middle" font-weight="bold">А: Строгий порядок</text>
+                        <!-- Сеть кристаллической решетки -->
+                        <line x1="80" y1="90" x2="230" y2="90" stroke="#334155" stroke-width="2"/>
+                        <line x1="80" y1="150" x2="230" y2="150" stroke="#334155" stroke-width="2"/>
+                        <line x1="80" y1="210" x2="230" y2="210" stroke="#334155" stroke-width="2"/>
+                        
+                        <line x1="80" y1="90" x2="80" y2="210" stroke="#334155" stroke-width="2"/>
+                        <line x1="155" y1="90" x2="155" y2="210" stroke="#334155" stroke-width="2"/>
+                        <line x1="230" y1="90" x2="230" y2="210" stroke="#334155" stroke-width="2"/>
+
+                        <!-- Узлы решетки -->
+                        <circle cx="80" cy="90" r="10" fill="#38bdf8"/><circle cx="155" cy="90" r="10" fill="#38bdf8"/><circle cx="230" cy="90" r="10" fill="#38bdf8"/>
+                        <circle cx="80" cy="150" r="10" fill="#38bdf8"/><circle cx="155" cy="150" r="10" fill="#38bdf8"/><circle cx="230" cy="150" r="10" fill="#38bdf8"/>
+                        <circle cx="80" cy="210" r="10" fill="#38bdf8"/><circle cx="155" cy="210" r="10" fill="#38bdf8"/><circle cx="230" cy="210" r="10" fill="#38bdf8"/>
+                    </g>
+
+                    <!-- Аморфное (Справа) -->
+                    <g class="choice-card" onclick="checkCrystalChoice(false)">
+                        <rect x="320" y="20" width="250" height="240" rx="15" fill="#090d16" stroke="#a855f7" stroke-width="3"/>
+                        <text x="445" y="50" font-size="18" fill="#a855f7" text-anchor="middle" font-weight="bold">Б: Беспорядок (Хаос)</text>
+                        <!-- Случайные линии и атомы -->
+                        <line x1="360" y1="100" x2="410" y2="160" stroke="#334155" stroke-width="2"/>
+                        <line x1="410" y1="160" x2="490" y2="110" stroke="#334155" stroke-width="2"/>
+                        <line x1="410" y1="160" x2="460" y2="220" stroke="#334155" stroke-width="2"/>
+
+                        <circle cx="360" cy="100" r="10" fill="#a855f7"/>
+                        <circle cx="410" cy="160" r="10" fill="#a855f7"/>
+                        <circle cx="490" cy="110" r="10" fill="#a855f7"/>
+                        <circle cx="460" cy="220" r="10" fill="#a855f7"/>
+                        <circle cx="520" cy="190" r="10" fill="#a855f7"/>
+                        <circle cx="370" cy="200" r="10" fill="#a855f7"/>
+                    </g>
+                </svg>`;
+            }
+
+            else if (type === 'substance_sorting') {
+                visualBox.innerHTML = `
+                <div style="display:flex; gap:20px; align-items:center; justify-content:center; height:100%;">
+                    <div class="choice-card" onclick="checkSubstance(true)">
+                        <span style="font-size:60px;">❄️</span>
+                        <span style="font-size:22px; font-weight:bold; color:#38bdf8;">Кристалл Льда</span>
+                    </div>
+                    <div class="choice-card" onclick="checkSubstance(false)">
+                        <span style="font-size:60px;">🕯️</span>
+                        <span style="font-size:22px; font-weight:bold; color:#a855f7;">Смола / Воск</span>
+                    </div>
+                </div>`;
+            }
+        }
+
+        /* --- ЛОГИКА УРОВНЯ 1: Молекулы --- */
+        function initMolecules(count, speed) {
+            molecules = [];
+            for (let i = 0; i < count; i++) {
+                molecules.push({
+                    x: 70 + Math.random() * 460,
+                    y: 40 + Math.random() * 220,
+                    vx: (Math.random() - 0.5) * speed,
+                    vy: (Math.random() - 0.5) * speed,
+                    radius: 10
+                });
+            }
+        }
+
+        function animateMolecules() {
+            const group = document.getElementById('molecules-group');
+            if (!group) return;
+
+            group.innerHTML = '';
+            molecules.forEach(m => {
+                m.x += m.vx;
+                m.y += m.vy;
+
+                // Отражение от стенок
+                if (m.x - m.radius < 55 || m.x + m.radius > 545) m.vx *= -1;
+                if (m.y - m.radius < 25 || m.y + m.radius > 275) m.vy *= -1;
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', m.x);
+                circle.setAttribute('cy', m.y);
+                circle.setAttribute('r', m.radius);
+                circle.setAttribute('fill', m.vx > 3 || m.vy > 3 ? '#f97316' : '#38bdf8');
+                group.appendChild(circle);
+            });
+
+            animFrameId = requestAnimationFrame(animateMolecules);
+        }
+
+        function heatMolecules() {
+            molecules.forEach(m => {
+                m.vx *= 2.5;
+                m.vy *= 2.5;
+            });
+            
+            const label = document.getElementById('temp-label');
+            if (label) {
+                label.textContent = 'Температура (T): Высокая 🔥 (Скорость выросла!)';
+                label.setAttribute('fill', '#f97316');
+            }
+
+            const fb = document.getElementById('feedback');
+            fb.innerText = 'Отлично! Высокая температура заставляет молекулы летать гораздо быстрее! 🚀';
+            fb.className = 'feedback-box show fb-success';
+            speakText('Отлично! Высокая температура заставляет молекулы летать гораздо быстрее!');
+
+            setTimeout(nextLevel, 5500);
+        }
+
+        /* --- ЛОГИКА УРОВНЯ 2: Поршень --- */
+        let pistonLimitX = 400;
+        function initPistonMolecules(count, maxX) {
+            molecules = [];
+            for (let i = 0; i < count; i++) {
+                molecules.push({
+                    x: 115 + Math.random() * (maxX - 130),
+                    y: 40 + Math.random() * 220,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    radius: 10
+                });
+            }
+        }
+
+        function animatePistonMolecules(maxX) {
+            const group = document.getElementById('piston-molecules');
+            if (!group) return;
+
+            group.innerHTML = '';
+            molecules.forEach(m => {
+                m.x += m.vx;
+                m.y += m.vy;
+
+                if (m.x - m.radius < 105 || m.x + m.radius > pistonLimitX - 5) m.vx *= -1;
+                if (m.y - m.radius < 25 || m.y + m.radius > 275) m.vy *= -1;
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', m.x);
+                circle.setAttribute('cy', m.y);
+                circle.setAttribute('r', m.radius);
+                circle.setAttribute('fill', '#38bdf8');
+                group.appendChild(circle);
+            });
+
+            animFrameId = requestAnimationFrame(() => animatePistonMolecules(pistonLimitX));
+        }
+
+        function compressPiston() {
+            pistonLimitX = 250;
+            const piston = document.getElementById('piston');
+            if (piston) piston.setAttribute('x', '250');
+
+            // Сжимаем молекулы внутрь
+            molecules.forEach(m => {
+                if (m.x > 240) m.x = 220;
+                m.vx *= 1.5;
+                m.vy *= 1.5;
+            });
+
+            const label = document.getElementById('pressure-label');
+            if (label) {
+                label.textContent = 'Объём (V): Маленький | Давление (P): Высокое 💥';
+                label.setAttribute('fill', '#f97316');
+            }
+
+            const fb = document.getElementById('feedback');
+            fb.innerText = 'Супер! Уменьшив объём V, мы заставили молекулы чаще ударяться, подняв давление P! 🎈';
+            fb.className = 'feedback-box show fb-success';
+            speakText('Супер! Уменьшив объём V, мы заставили молекулы чаще ударяться, подняв давление P!');
+
+            setTimeout(nextLevel, 6000);
+        }
+
+        /* --- ЛОГИКА УРОВНЕЙ 3 и 4 --- */
+        function checkCrystalChoice(isCrystal) {
+            const fb = document.getElementById('feedback');
+            if (isCrystal) {
+                fb.innerText = 'Верно! В кристаллах атомы построены в ровную регулярную решётку (порядок)! 💎';
+                fb.className = 'feedback-box show fb-success';
+                speakText('Верно! В кристаллах атомы построены в ровную регулярную решётку!');
+                setTimeout(nextLevel, 5000);
+            } else {
+                fb.innerText = 'Это аморфное тело (хаос). Найди картинку А с ровной кристаллической решеткой!';
+                fb.className = 'feedback-box show fb-info';
+                speakText('Это аморфное тело. Найди картинку А с ровной кристаллической решеткой!');
+            }
+        }
+
+        function checkSubstance(isCrystal) {
+            const fb = document.getElementById('feedback');
+            if (isCrystal) {
+                fb.innerText = 'Блестяще! Лёд имеет четкую кристаллическую структуру и плавится при 0°C! ❄️';
+                fb.className = 'feedback-box show fb-success';
+                speakText('Блестяще! Лёд имеет четкую кристаллическую структуру и плавится при постоянной температуре!');
+                setTimeout(nextLevel, 5000);
+            } else {
+                fb.innerText = 'Смола и воск — аморфные вещества, они плавно размягчаются. Выбери Лёд!';
+                fb.className = 'feedback-box show fb-info';
+                speakText('Смола и воск — аморфные вещества. Выбери Лёд!');
+            }
+        }
+
+        function nextLevel() {
+            currentLevelIdx++;
+            if (currentLevelIdx < LEVELS.length) {
+                loadLevel(currentLevelIdx);
+            } else {
+                document.getElementById('screen-outro').classList.remove('hidden');
+                speakText("Все исследования завершены! Ты отлично усвоил молекулярно-кинетическую теорию, параметры газа и строение твердых тел!");
+            }
+        }
+    </script>
+</body>
+</html>
